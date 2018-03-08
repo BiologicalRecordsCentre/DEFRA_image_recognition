@@ -7,12 +7,16 @@
 #   Search for whatever you want on google                                                 #
 #   Click the image option at the top to see image results                                 #
 #   Scroll down to the very bottom, clicking on 'Load More Images' as you go               #
-#   Save as 'Webpage, Complete' (it must be this format to preserve full URL links         #
+#   Save as 'Webpage, Complete' (it must be this format to preserve full URL links)        #
 #     NOTE: DO NOT rename the file.  Leave it as the default                               #
 #   Repeat for as many searches as you wish                                                #
 #   Enter the location of your saved files here:                                           #
 
 savelocation <- '.'
+
+# Set a maximum number of images: e.g. maximages = 100 OR maximages = NA                   #
+
+maximages = NA
 
 #   Run the code.                                                                          #
 #                                                                                          #
@@ -21,15 +25,19 @@ savelocation <- '.'
 ############################################################################################
 library('RCurl')
 library('httr')
+source('./ImageDownloader.R')
 
 # First, find all the html files
 htmls <- list.files(savelocation,pattern='\\.html')
 
-# Set up a couple of files to track failed URLs
-URLFailure <- FileFailure <- c()
+# Set up a list to track failed URLs
+FileFailure <- c()
 
 # Loop through the html files, downloading all images to separate folders
 for(i in htmls){
+  # First, delete the html files folder, as we don't need it
+  unlink(file.path(savelocation,gsub('\\.html','_files',i)), recursive = TRUE)
+
   # Read in the html file
   tmp     <- readLines(i)
   # All URLs start 'imgres\\imgurl=' and end '&amp'.
@@ -49,8 +57,10 @@ for(i in htmls){
   imgName <- unlist(regmatches(imgres,regexpr('(?i).+?\\.jp[e]?g',imgres,perl=TRUE)))
 
   # Create a directory for these images using the search term from the file name
-  NewDir  <- unlist(regmatches(i,gregexpr('.+(?= - Google Search)',i,perl=TRUE)))
-  dir.create(file.path(savelocation,NewDir),showWarnings = FALSE)
+  NewDir  <- paste0(unlist(regmatches(i,gregexpr('.+(?= - Google Search)',i,perl=TRUE))),
+                    ' - Google')
+  NewDir  <- file.path(savelocation,NewDir)
+  dir.create(NewDir,showWarnings = FALSE)
   
   # Strip down file names (including absolute path) greater than 250 characters,
   # as we're getting close to max file length in Windows
@@ -59,27 +69,17 @@ for(i in htmls){
   imgName[(nchar(imgName)+loclength+1)>250] <-
     substr(longlist,nchar(longlist)+loclength-249,nchar(longlist))
   
+  # Save these URLs and names as a dataframe for sending to the image downloader function
+  imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
+  
   # Now, download the files
-  for(j in 1:length(imgURLs)){
-    cat(paste0('File ',j,' of ',length(imgURLs),'\n'))
-    # Check if the file exists already.  If it does, no need to try a download
-    if(!file.exists(file.path(savelocation,NewDir,imgName[j]))){
-      # The downloading sometimes fails, with an error.  Therefore, the download command
-      # is wrapped in a tryCatch, to prevent exiting on error.
-      tryCatch({
-        if(http_status(GET(imgURLs[j]))$category=='Success'){
-          download.file(imgURLs[j],file.path(savelocation,NewDir,imgName[j]),mode = 'wb')  
-        } else {
-          # There is a problem with the URL.  Save the URL to the URLFailure list
-          URLFailure <- c(URLFailure,imgURLs[j])
-          cat(paste0('Could not find URL: ',imgURLs[j],'\n'))
-        }
-      },error=function(e){
-        # The code failed with an error.  This is probably due to the URL,
-        # but could be a save issue.
-        FileFailure <- c(FileFailure,imgURLs[j])
-        cat(paste0('Could not save from URL: ',imgURLs[j],'\n\n'))
-      })
-    }
-  }
+  TmpFileFailure <- download.images(imgDF,NewDir,maximages,FileFailure)
+  FileFailure    <- c(FileFailure,TmpFileFailure)
+}
+
+# Print a completion message
+if(is.null(FileFailure)){
+  cat('All files downloaded successfully')
+} else {
+  cat('Some files failed.  Have a look at FileFailure for failed URLs')
 }
