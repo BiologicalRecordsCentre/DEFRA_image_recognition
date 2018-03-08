@@ -6,7 +6,7 @@
 library(devtools)
 install_github('FrancescaMancini/FlickrAPI_EABhackathon')
 library(flickr)
-source('./ImageDownloader.R')
+source(file.path('.','Image_Retrieval','ImageDownloader.R'))
 
 # Then set save directory
 savelocation <- '.'

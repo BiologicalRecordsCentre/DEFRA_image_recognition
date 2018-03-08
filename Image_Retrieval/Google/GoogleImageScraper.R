@@ -25,7 +25,7 @@ maximages = NA
 ############################################################################################
 library('RCurl')
 library('httr')
-source('./ImageDownloader.R')
+source(file.path('.','Image_Retrieval','ImageDownloader.R'))
 
 # First, find all the html files
 htmls <- list.files(savelocation,pattern='\\.html')
