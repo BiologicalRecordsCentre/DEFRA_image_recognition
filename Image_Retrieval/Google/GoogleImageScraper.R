@@ -12,7 +12,7 @@
 #   Repeat for as many searches as you wish                                                #
 #   Enter the location of your saved files here:                                           #
 
-savelocation <- '.'
+savelocation <- file.path('.','Image_Retrieval','Google')
 
 # Set a maximum number of images: e.g. maximages = 100 OR maximages = NA                   #
 
@@ -31,7 +31,7 @@ source(file.path('.','Image_Retrieval','ImageDownloader.R'))
 htmls <- list.files(savelocation,pattern='\\.html')
 
 # Set up a list to track failed URLs
-FileFailure <- c()
+FileError <- c()
 
 # Loop through the html files, downloading all images to separate folders
 for(i in htmls){
@@ -39,7 +39,7 @@ for(i in htmls){
   unlink(file.path(savelocation,gsub('\\.html','_files',i)), recursive = TRUE)
 
   # Read in the html file
-  tmp     <- readLines(i)
+  tmp     <- readLines(file.path(savelocation,i))
   # All URLs start 'imgres\\imgurl=' and end '&amp'.
   # These bookends are used to find the URLs.
   imgres  <- unlist(regmatches(tmp,
@@ -57,8 +57,7 @@ for(i in htmls){
   imgName <- unlist(regmatches(imgres,regexpr('(?i).+?\\.jp[e]?g',imgres,perl=TRUE)))
 
   # Create a directory for these images using the search term from the file name
-  NewDir  <- paste0(unlist(regmatches(i,gregexpr('.+(?= - Google Search)',i,perl=TRUE))),
-                    ' - Google')
+  NewDir  <- unlist(regmatches(i,gregexpr('.+(?= Search)',i,perl=TRUE)))
   NewDir  <- file.path(savelocation,NewDir)
   dir.create(NewDir,showWarnings = FALSE)
   
@@ -73,13 +72,17 @@ for(i in htmls){
   imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
   
   # Now, download the files
-  TmpFileFailure <- download.images(imgDF,NewDir,maximages,FileFailure)
-  FileFailure    <- c(FileFailure,TmpFileFailure)
+  TmpFileError <- download.images(imgDF,NewDir,maximages,FileError)
+  FileError    <- c(FileError,TmpFileError)
+  
+  # Correctly saved htmls will still throw a warning, so just let the user know this isn't
+  # anything to worry about
+  cat("Don't worry about",'"incomplete final line" error messages\n\n')
 }
 
 # Print a completion message
-if(is.null(FileFailure)){
-  cat('All files downloaded successfully')
+if(is.null(FileError)){
+  cat('All files downloaded successfully\n')
 } else {
-  cat('Some files failed.  Have a look at FileFailure for failed URLs')
+  cat('Some files failed.  Have a look at FileError for failed URLs\n')
 }
