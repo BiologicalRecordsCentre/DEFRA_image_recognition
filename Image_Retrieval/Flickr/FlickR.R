@@ -61,9 +61,13 @@ download.flickr <- function(searchDF,savelocation,maximages,woeResult,yearRange,
         # imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
         
         # Now, download the files
-        downloadImages(photoSearch_results = photoDF[sample(x = 1:nrow(photoDF),
-                                                            size =  maximages,
-                                                            replace = FALSE), ],
+        if(!is.na(maximages) & maximages != Inf){
+          photoDF <- photoDF[sample(x = 1:nrow(photoDF),
+                             size =  maximages,
+                             replace = FALSE), ]
+        }
+        
+        downloadImages(photoSearch_results = photoDF,
                        licenses = 0:10,
                        max_quality = 2,
                        saveDir = NewDir)
