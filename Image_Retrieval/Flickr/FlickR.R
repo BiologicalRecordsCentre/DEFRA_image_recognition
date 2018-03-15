@@ -38,29 +38,42 @@ download.flickr <- function(searchDF,savelocation,maximages,woeResult,yearRange,
       # Call the photosSearch function from the flickr package
       photoDF <- photosSearch(year_range = yearRange,
                               text = gsub(' ','\\+',i), 
-                              woe_id = as.character(woeResult$woe_id[1]))
+                              woe_id = switch(is.null(woeResult) + 1,
+                                              as.character(woeResult$woe_id[1]),
+                                              NULL))
       if(is.null(photoDF)){
         cat('No images for',i,'for year range',yearRange[1],'-',yearRange[2],
-            'in',as.character(woeResult$woe_name[1]),'\n\n')
+            ifelse(is.null(woeResult), '', paste('in',as.character(woeResult$woe_name[1]))),'\n\n')
       } else {
         # Generate a list of URLs based on the highest resolution file first, then working
         # down the list
-        oList   <- photoDF[!is.na(photoDF$url_o),]$url_o
-        lList   <- photoDF[is.na(photoDF$url_o)&(!is.na(photoDF$url_l)),]$url_l
-        mList   <- photoDF[is.na(photoDF$url_l)&(!is.na(photoDF$url_m)),]$url_m
-        sList   <- photoDF[is.na(photoDF$url_m)&(!is.na(photoDF$url_s)),]$url_s
-        imgURLs <- c(oList,lList,mList,sList)
-        
-        # Set up the file names based on everything after the last / symbol
-        imgName <- unlist(regmatches(imgURLs,
-                                     regexpr('(?<=\\/)[^\\/]*$',imgURLs,perl=TRUE)))
-
-        # Save URLs and names as a dataframe for sending to the image downloader function
-        imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
+        # oList   <- photoDF[!is.na(photoDF$url_o),]$url_o
+        # lList   <- photoDF[is.na(photoDF$url_o)&(!is.na(photoDF$url_l)),]$url_l
+        # mList   <- photoDF[is.na(photoDF$url_l)&(!is.na(photoDF$url_m)),]$url_m
+        # sList   <- photoDF[is.na(photoDF$url_m)&(!is.na(photoDF$url_s)),]$url_s
+        # imgURLs <- c(oList,lList,mList,sList)
+        # 
+        # # Set up the file names based on everything after the last / symbol
+        # imgName <- unlist(regmatches(imgURLs,
+        #                              regexpr('(?<=\\/)[^\\/]*$',imgURLs,perl=TRUE)))
+        # 
+        # # Save URLs and names as a dataframe for sending to the image downloader function
+        # imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
         
         # Now, download the files
-        TmpFileError <- download.images(imgDF,NewDir,maximages,FileError)
-        FileError    <- c(FileError,TmpFileError)
+        if(!is.na(maximages) & maximages != Inf){
+          photoDF <- photoDF[sample(x = 1:nrow(photoDF),
+                             size =  maximages,
+                             replace = FALSE), ]
+        }
+        
+        downloadImages(photoSearch_results = photoDF,
+                       licenses = 0:10,
+                       max_quality = 2,
+                       saveDir = NewDir)
+        
+        # TmpFileError <- download.images(imgDF,NewDir,maximages,FileError)
+        # FileError    <- c(FileError,TmpFileError)
       }
     }
   }

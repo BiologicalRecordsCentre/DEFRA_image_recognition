@@ -3,9 +3,12 @@
 #  Script to read in a search csv, and look for images on Flickr that match the query      #
 #                                                                                          #
 ############################################################################################
+# Because I run this in base R this is useful
+# setwd("W:/PYWELL_SHARED/Pywell Projects/BRC/Tom August/DEFRA_image_recognition")
+
 source(file.path('.','Image_Retrieval','Flickr','FlickR.R'))
 library(devtools)
-install_github('FrancescaMancini/FlickrAPI_EABhackathon')
+# install_github('FrancescaMancini/FlickrAPI_EABhackathon')
 library(flickr)
 library(httr)
 library(RCurl)
@@ -14,11 +17,11 @@ library(RCurl)
 savelocation <- file.path('.','Image_Retrieval','Flickr')
 
 # Set a maximum number of images: e.g. maximages = 100 OR maximages = NA
-maximages = 4
+maximages = Inf
 
 # Set the year range to search for images.  This year can be entered as:
 #    format(Sys.Date(), "%Y")
-startYear <- 2017
+startYear <- 1990
 endYear   <- format(Sys.Date(), "%Y")
 yearRange <- c(startYear,endYear)
 
@@ -27,7 +30,8 @@ location <- 'UK'
 
 # Authenticate with Flickr.  This is needed to allow you to query the Flickr database
 # Run the below command, and a browser should launch for you to enter your Flickr details
-authFlickr()
+# only needs to be done once
+# authFlickr()
 
 # This section finds the relevant ID number for location chosen, and outputs the name
 woeResult <- findPlaces(location)
@@ -45,7 +49,7 @@ if(length(csvs)==0){
 } else {
   searchDF <- read.csv(file.path(pathtocsvs,csvs),stringsAsFactors = FALSE)
   FileError <- download.flickr(searchDF,savelocation,maximages,
-                               woeResult,yearRange,FileError)
+                               woeResult = NULL,yearRange,FileError)
 }
 
 # Print a completion message
