@@ -14,11 +14,11 @@ library(RCurl)
 savelocation <- file.path('.','Image_Retrieval','Flickr')
 
 # Set a maximum number of images: e.g. maximages = 100 OR maximages = NA
-maximages = 4
+maximages = NA
 
 # Set the year range to search for images.  This year can be entered as:
 #    format(Sys.Date(), "%Y")
-startYear <- 2017
+startYear <- 1990
 endYear   <- format(Sys.Date(), "%Y")
 yearRange <- c(startYear,endYear)
 
