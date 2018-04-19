@@ -3,12 +3,12 @@
 #  Script to read in a search csv, and look for images on Flickr that match the query      #
 #                                                                                          #
 ############################################################################################
-# Because I run this in base R this is useful
+#
 # setwd("W:/PYWELL_SHARED/Pywell Projects/BRC/Tom August/DEFRA_image_recognition")
 
 source(file.path('.','Image_Retrieval','Flickr','FlickR.R'))
 library(devtools)
-# install_github('FrancescaMancini/FlickrAPI_EABhackathon')
+install_github('FrancescaMancini/FlickrAPI_EABhackathon')
 library(flickr)
 library(httr)
 library(RCurl)
@@ -30,7 +30,8 @@ location <- 'UK'
 
 # Authenticate with Flickr.  This is needed to allow you to query the Flickr database
 # Run the below command, and a browser should launch for you to enter your Flickr details
-# only needs to be done once
+# This only needs to be done once
+# Currently this is commented out to prevent it running every time this script is run
 # authFlickr()
 
 # This section finds the relevant ID number for location chosen, and outputs the name

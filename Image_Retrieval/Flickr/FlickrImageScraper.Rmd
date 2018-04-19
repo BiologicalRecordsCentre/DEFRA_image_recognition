@@ -1,0 +1,99 @@
+---
+title: "Flickr Image Scraper"
+author: "Mark Logie"
+date: "16 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+This is a script for scraping photos from Flickr.
+Before running this script, you need to create a csv file with all your search terms.  This csv needs to be structured as follows:
+
+Target             | SearchTerm1        | SearchTerm2         | SearchTerm3     | ...
+------------------ | ------------------ | ------------------- | --------------- | ---
+Alsike Clover      | Alsike Clover      | Trifolium hybridum  |                 | ...
+Birds Foot Trefoil | Birds Foot Trefoil | Lotus corniculatus  |                 | ...
+Black Knapweed     | Black Knapweed     | Centaurea debeauxii | Centaurea nigra | ...
+Black Medick       | Black Medick       | Medicago lupulina   |                 | ...
+Lucerne            | Lucerne Flower     | Medicago sativa     | Alfalfa Flower  | ...
+
+* The first row can be anything you want.
+* The first column contains all the search targets: a list of everything you would like to find images of, but not necessarily the search terms.
+* The next columns are the actual search terms, which will be combined into folders for each target.
+
+Once you've created this csv, save it somewhere and set that location here:
+```{r csv}
+pathtocsvs <- file.path('.','Image_Retrieval','Flickr')
+```
+
+## Dependencies
+
+Here are the dependencies for the script
+
+```{r dependencies, message=FALSE, warning=FALSE}
+source(file.path('.','Image_Retrieval','Flickr','FlickR.R'))
+library(devtools)
+install_github('FrancescaMancini/FlickrAPI_EABhackathon')
+library(flickr)
+library(httr)
+library(RCurl)
+```
+
+## Setting up initial parameters
+
+This section of the script sets up the parameters for the search and where the photos are going to be saved.
+The parameters to be set up are:
+
+* Save directory for the images once downloaded
+* The number of images to be saved for each target for example:
+    + maximages = 100
+    + maximages = Inf
+* The start and finish years for the search
+    + Either of these can be set to the current year using 'format(Sys.Date(), "%Y")'
+* Finally, the location in the world where you want to search for images.
+    + Good options are Scotland, UK, Europe, or World
+    + If instead you want to search everywhere, set this to NULL
+
+```{r parameters}
+savelocation <- file.path('.','Image_Retrieval','Flickr')
+maximages <- Inf
+startYear <- 1990
+endYear   <- format(Sys.Date(), "%Y")
+worldlocation <- NULL
+```
+## Flickr Authentication
+
+You need to authenticate with Flickr, to allow you to query the Flickr database.  The below command needs to be run once.
+It is currently set to not be evaluated.  If this is your first time running this script, you need to run this command in the console.
+
+```{r flickr_authentication, eval=FALSE}
+authFlickr()
+```
+## Downloader
+
+Now that you're all set up, the script will run and download all the images for the search terms you've specified.  This can take a long time.
+
+First, the script find the relevant ID number for the location you chose (if you chose a location), and outputs the name.
+Then the images are downloaded.
+
+```{r downloader}
+if(!is.null(worldlocation)){
+  woeResult <- findPlaces(worldlocation)
+  cat(paste0('Location chosen: ',woeResult$woe_name[1],'\n'))
+}
+csvs <- list.files(pathtocsvs,'\\.csv')
+
+FileError <- c()
+if(length(csvs)==0){
+  cat('This script requires a search csv. Please create one and try again\n')
+} else if(length(csvs)>1){
+  cat('This script requires exactly 1 search csv. Please delete extra csvs and try again\n')
+} else {
+  searchDF <- read.csv(file.path(pathtocsvs,csvs),stringsAsFactors = FALSE)
+  download.flickr(searchDF,savelocation,maximages,
+                  woeResult = NULL,c(startYear,endYear),FileError)
+  cat(FileError)
+}
+```

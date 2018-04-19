@@ -8,9 +8,8 @@
 #      maximages - maximum number of images to download.  Can be a numeric or NA           #
 #      woeResult - the DF resulting from calling findPlaces in the                         #
 #                  FlickrAPI_EABhackathon/flickr package                                   #
+#                  This can be NULL if all images, with and without location data          #
 #      FileError - a list of failed URLs, for error tracking                               #
-#    Outputs:                                                                              #
-#      FileError - all failed URLs, appended to input list                                 #
 #                                                                                          #
 ############################################################################################
 download.flickr <- function(searchDF,savelocation,maximages,woeResult,yearRange,FileError){
@@ -45,21 +44,6 @@ download.flickr <- function(searchDF,savelocation,maximages,woeResult,yearRange,
         cat('No images for',i,'for year range',yearRange[1],'-',yearRange[2],
             ifelse(is.null(woeResult), '', paste('in',as.character(woeResult$woe_name[1]))),'\n\n')
       } else {
-        # Generate a list of URLs based on the highest resolution file first, then working
-        # down the list
-        # oList   <- photoDF[!is.na(photoDF$url_o),]$url_o
-        # lList   <- photoDF[is.na(photoDF$url_o)&(!is.na(photoDF$url_l)),]$url_l
-        # mList   <- photoDF[is.na(photoDF$url_l)&(!is.na(photoDF$url_m)),]$url_m
-        # sList   <- photoDF[is.na(photoDF$url_m)&(!is.na(photoDF$url_s)),]$url_s
-        # imgURLs <- c(oList,lList,mList,sList)
-        # 
-        # # Set up the file names based on everything after the last / symbol
-        # imgName <- unlist(regmatches(imgURLs,
-        #                              regexpr('(?<=\\/)[^\\/]*$',imgURLs,perl=TRUE)))
-        # 
-        # # Save URLs and names as a dataframe for sending to the image downloader function
-        # imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
-        
         # Now, download the files
         if(!is.na(maximages) & maximages != Inf){
           photoDF <- photoDF[sample(x = 1:nrow(photoDF),
@@ -71,12 +55,7 @@ download.flickr <- function(searchDF,savelocation,maximages,woeResult,yearRange,
                        licenses = 0:10,
                        max_quality = 2,
                        saveDir = NewDir)
-        
-        # TmpFileError <- download.images(imgDF,NewDir,maximages,FileError)
-        # FileError    <- c(FileError,TmpFileError)
       }
     }
   }
-  # Return the failure list
-  FileError
 }
