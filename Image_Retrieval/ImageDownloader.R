@@ -19,7 +19,6 @@ download.images <- function(imgDF,NewDir,maximages,FileError){
     rownames(imgDF) <- seq(length=nrow(imgDF))
   }
   for(j in 1:nrow(imgDF)){
-    cat(paste0('File ',j,' of ',nrow(imgDF),'\n'))
     # Check if the file exists already.  If it does, no need to try a download
     if(!file.exists(file.path(NewDir,imgDF$imgName[j]))){
       # The downloading sometimes fails, with an error.  Therefore, the download command

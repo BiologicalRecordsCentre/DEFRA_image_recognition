@@ -1,0 +1,107 @@
+---
+title: "Google Image Scraper"
+author: "Mark Logie"
+date: "16 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This script is to scrape images from google image search
+
+To use it, you need to:
+
+* Open up a browser
+* Search for whatever you want on google
+* Click the image option at the top to see image results
+* Scroll down to the very bottom, clicking on 'Load More Images' as you go
+* Save as 'Webpage, Complete' (it must be this format to preserve full URL links)
+    + NOTE: DO NOT rename the file.  Leave it as the default
+* Repeat for as many searches as you wish
+
+Enter the location of your saved files and maximum number of images e.g. 100 or NA
+
+```{r locations}
+savelocation <- file.path('.')
+maximages = NA
+```
+
+## Dependencies
+
+Here are the dependencies for the script
+
+```{r dependencies, message=FALSE, warning=FALSE}
+library('RCurl')
+library('httr')
+source(file.path('..','ImageDownloader.R'))
+```
+## Main body
+
+This script will create subfolders for each search, and drop the images in there.
+
+First, it finds all the html files, then loops through them, downloading all images to separate folders.  A new directory will be created for each html file.
+
+For example, if you have files:
+
+* oxeye daisy - Google Search.html
+* black medick - Google Seach.html
+
+This script will create folders and files as follows:
+
+* ./oxeye daisy - Google
+    + /image1.jpg
+    + /image2.jpg
+    + /...
+* ./black medick - Google
+    + /image1.jpg
+    + /image2.jpg
+    + /...
+
+```{r download, message=FALSE, warning=FALSE}
+htmls <- list.files(savelocation,pattern='\\.html')
+FileError <- c()
+for(i in htmls){
+  unlink(file.path(savelocation,gsub('\\.html','_files',i)), recursive = TRUE)
+  tmp     <- readLines(file.path(savelocation,i))
+  imgres  <- unlist(regmatches(tmp,
+                               gregexpr('(?<=imgres\\?imgurl=).+?(?=\\&amp)',
+                                        tmp,
+                                        perl=TRUE)))
+  imgres  <- imgres[grepl('(?i).+?\\.jp[e]?g',imgres,perl=TRUE)]
+  imgURLs <- unlist(lapply(imgres, function(x) URLdecode(x)))
+  imgName <- unlist(regmatches(imgres,regexpr('(?i).+?\\.jp[e]?g',imgres,perl=TRUE)))
+
+  # Create a new directory for this search item
+  NewDir  <- unlist(regmatches(i,gregexpr('.+(?= Search)',i,perl=TRUE)))
+  NewDir  <- file.path(savelocation,NewDir)
+  dir.create(NewDir,showWarnings = FALSE)
+  
+  # Strip down file names (including absolute path) greater than 250 characters,
+  # as we're getting close to max file length in Windows
+  loclength <- nchar(file.path(normalizePath(savelocation),NewDir))
+  longlist  <- imgName[(nchar(imgName)+loclength+1)>250]
+  imgName[(nchar(imgName)+loclength+1)>250] <-
+    substr(longlist,nchar(longlist)+loclength-249,nchar(longlist))
+  
+  # Save these URLs and names as a dataframe for sending to the image downloader function
+  imgDF <- data.frame(imgURLs,imgName,stringsAsFactors = FALSE)
+  
+  # Now, download the files
+  TmpFileError <- download.images(imgDF,NewDir,maximages,FileError)
+  FileError    <- c(FileError,TmpFileError)
+}
+```
+Print a completion message
+
+```{r completion}
+if(is.null(FileError)){
+  cat('All files downloaded successfully\n')
+} else {
+  cat(length(FileError),' files failed:\n')
+  cat(FileError)
+}
+```

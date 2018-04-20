@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 This is a script for scraping photos from Flickr.
 Before running this script, you need to create a csv file with all your search terms.  This csv needs to be structured as follows:
 
@@ -25,7 +26,7 @@ Lucerne            | Lucerne Flower     | Medicago sativa     | Alfalfa Flower  
 
 Once you've created this csv, save it somewhere and set that location here:
 ```{r csv}
-pathtocsvs <- file.path('.','Image_Retrieval','Flickr')
+pathtocsvs <- file.path('.')
 ```
 
 ## Dependencies
@@ -33,7 +34,7 @@ pathtocsvs <- file.path('.','Image_Retrieval','Flickr')
 Here are the dependencies for the script
 
 ```{r dependencies, message=FALSE, warning=FALSE}
-source(file.path('.','Image_Retrieval','Flickr','FlickR.R'))
+source(file.path('.','FlickR.R'))
 library(devtools)
 install_github('FrancescaMancini/FlickrAPI_EABhackathon')
 library(flickr)
@@ -94,6 +95,5 @@ if(length(csvs)==0){
   searchDF <- read.csv(file.path(pathtocsvs,csvs),stringsAsFactors = FALSE)
   download.flickr(searchDF,savelocation,maximages,
                   woeResult = NULL,c(startYear,endYear),FileError)
-  cat(FileError)
 }
 ```
