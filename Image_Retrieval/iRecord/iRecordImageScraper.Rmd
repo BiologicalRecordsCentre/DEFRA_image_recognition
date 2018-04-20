@@ -1,0 +1,242 @@
+---
+title: "iRecord Image Scraper"
+author: "Mark Logie"
+date: "20 April 2018"
+output: html_document
+---
+
+<style>
+.nobullet li {
+  list-style-type: none;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction and setting up
+
+This is a script for scraping photos from [iRecord](https://www.brc.ac.uk/irecord/).
+
+Before running this script, you need to have a csv of occurrences of your species of interest.  Here is an example query which produces the relevant data, for all butterflies:
+
+<div class="nobullet">
+* SELECT cof.id,  
+    + cttl.preferred_taxon,  
+    + cttl.default_common_name,  
+    + om.path,  
+    + cof.media_count,  
+    + cttl.taxon_group,  
+    + cttl.order_taxon,  
+    + cof.record_status  
+* FROM cache_occurrences_functional cof  
+* LEFT JOIN cache_taxa_taxon_lists cttl ON cttl.id = cof.taxa_taxon_list_id  
+* LEFT JOIN occurrence_media om ON cof.id = om.occurrence_id  
+* WHERE media_count > 0 AND  
+    + (record_status = 'C' OR record_status = 'V') AND  
+    + training = FALSE AND  
+    + (taxon_group = 'Butterflies' OR taxon_group = 'insect - butterfly')  
+ORDER BY preferred_taxon
+</div>
+
+Save the output of this query to a csv and enter the location of the file here.  
+
+```{r csv}
+OccurrencesCSV <- file.path('.','Example','iRecordExample.csv')
+```
+
+Set the location of the base directory you'll be working in.
+
+```{r photodir}
+photodir <- file.path('.','Example')
+
+```
+
+## Dependencies
+
+Here are the dependencies for the script
+
+```{r dependencies, message=FALSE, warning=FALSE}
+library('httr')
+library('RCurl')
+library('plyr')
+library('stringr')
+source('./MoveImages.R')
+source('./Cutoffs.R')
+source('./AllTaxaReformat.R')
+```
+
+# Parameter Setup
+
+Choose whether there will be a cutoff for MINIMUM number of verified images and set that cutoff.  Also, choose if there will be a MAXIMUM number of images for each species
+
+```{r parameters}
+cutoffmin    <- FALSE
+CutoffminNum <- 100
+cutoffmax    <- TRUE
+CutoffmaxNum <- 200
+```
+
+Then set a couple of further output parameters:
+
+* OutputCountCSV: the number of images for each species
+* AllImagesCSV: the names and links to every image
+* VerifiedOnly: whether or not the images will be verified images only, or if any image is acceptable
+* CollateImages: whether or not all the images are going to be put in one big folder, or a separate folder for each image
+* CollateFolder: where the images will be colated to
+
+```{r csvs}
+OutputCountCSV <- 'CountImagesExample.csv'
+AllImagesCSV   <- 'ImagesOutputExample.csv'
+VerifiedOnly   <- FALSE
+CollateImages  <- TRUE
+CollateFolder  <- file.path('.','Example','Images')
+```
+## Main body
+
+This is the main part of the script
+
+### Data setup
+
+Before the images can be downloaded, the data needs to be sorted and cleaned a bit, and the cutoffs applied where specified above.  Then directories are created for each species.
+
+```{r main_body, message=FALSE}
+## URL for the images
+irecordpath <- 'https://warehouse1.indicia.org.uk/upload'
+
+## Obtain the data from the query into a data frame
+AllTaxa <- read.csv(OccurrencesCSV,stringsAsFactors = FALSE)
+
+## Reformat the data frame for use
+AllTaxa <- all.taxa.reformat(AllTaxa)
+
+## Use the species status column to count verified/unverified images of each species
+ImageCount    <- as.data.frame(table(AllTaxa$Species_Status))
+## Also create a total count
+AllImageCount <- as.data.frame(table(AllTaxa$SpeciesLevel))
+
+## make the name a character
+ImageCount$Var1    <- as.character(ImageCount$Var1)
+AllImageCount$Var1 <- as.character(AllImageCount$Var1)
+
+## Subset, using only entries with frequency >Cutoff which are verified, if required
+if(cutoffmin){
+  ImageCount <- ImageCount[ImageCount$Freq >=
+                           CutoffminNum & grepl(ImageCount$Var1, pattern = '_V$'),]
+  ## Use this to create the species list of interest
+  ImageCount$Species <- gsub('_V$', '', ImageCount$Var1)
+  ## Subset the all taxa dataframe with only those in the test species list
+  AllTaxa <- AllTaxa[AllTaxa$SpeciesLevel %in% ImageCount$Species, ]
+}
+
+## Remove images over the max cutoff, if required
+if(cutoffmax){
+  removelist <- cutoff.max(AllTaxa)
+  if(!is.null(removelist)){
+    AllTaxa <- AllTaxa[-removelist,]
+  }
+}
+
+## Create directories based on species and verified/unverified
+for(i in 1:length(unique(
+  AllTaxa[,c('SpeciesLevel','record_status')])$SpeciesLevel)){
+  CurrentSpecies <- 
+    (unique(AllTaxa[,c('SpeciesLevel','record_status')])$SpeciesLevel[i])
+  CurrentStatus <-
+    (unique(AllTaxa[,c('SpeciesLevel','record_status')])$record_status[i])
+  CurrentStatus <- gsub('C','Unverified',(gsub('V','Verified',CurrentStatus)))
+  if(!dir.exists(file.path(photodir,CurrentSpecies,CurrentStatus))){
+    dir.create(file.path(photodir,CurrentSpecies,CurrentStatus),recursive = T)
+  }
+  cat('Creating directory ',i,' of ',
+      length(unique(AllTaxa[,c('SpeciesLevel','record_status')])$SpeciesLevel),'\n')
+                
+}
+```
+
+### Download images
+
+Now that the data is set up and ready to go, the images are downloaded
+
+```{r download, message=FALSE}
+## Loop through all the files, extracting images as you go.  Save using id number
+##  rather than the less useful jpg path
+jpgroot <- 'blank'
+for(i in 1:length(AllTaxa$id)){
+  if((AllTaxa$media_count[i])>1){
+  ## There's more than one image for this occurrence, so add numbered suffix
+    if(jpgroot!=AllTaxa$id[i]){
+      ## The first image of a set of images, so set counter to 1
+      count <- 1
+    } else {
+      ## Not the first, so add one to the counter
+      count <- (count+1)
+    }
+    ## Now the counter has been set, create the string for appending to the file
+    append <- paste0('_',count,'.jpg')
+  } else {
+    ##Only one image, so nice and simple, just need to add .jpg
+    append <- '.jpg'
+  }
+  ## Set the root of the file name.  This is needed for the next iteration
+  jpgroot <- AllTaxa$id[i]
+  jpg <- paste0(jpgroot,append)
+  
+  ## Provide a status message
+  print(paste0('File name: ',jpg,
+               ', File ',i,' of ',length(AllTaxa$id)))
+  URLjpg <- file.path(irecordpath,AllTaxa$path[i])
+  AllTaxa$URL[i] <- URLjpg
+  AllTaxa$URLExists[i] <- (url.exists(URLjpg))
+  if(AllTaxa$record_status[i]=='V'){
+    ## Image is verified, this determines sub-folder
+    status <- 'Verified'
+  } else {
+    ## Image is unverified
+    status <- 'Unverified'
+  }
+  AllTaxa$Status[i] <- status
+  if(AllTaxa$URLExists[i]){
+    ## Download from the URL and save to the directory.  Structure is:
+    ##   ./Species/[Unverified/Verified]/idnumber_countnumber.jpg
+    download.file(URLjpg,
+                  file.path(photodir,AllTaxa$SpeciesLevel[i],status,jpg),
+                  mode = 'wb')
+    ## Sleep for 3 seconds to prevent overloading the website
+    Sys.sleep(3)
+  } else {
+    ## URL doesn't exist
+    print(paste('Failed to get image id =',AllTaxa$id[i]))
+  }
+}
+```
+
+## Save and finish
+
+Now that all the images are downloaded, the results are saved as a csv for easily examining and summarising what data is available.
+
+```{r finish, message=FALSE}
+## Write off the ImageCount to a csv, sorting by frequency
+if(VerifiedOnly){
+  ImageCount <- ImageCount[order(-ImageCount$Freq),]
+  ImageCount <- ImageCount[-c(1)]
+  write.csv(ImageCount,
+            file.path(photodir,OutputCountCSV),
+            row.names = FALSE)
+} else {
+  AllImageCount <- AllImageCount[order(-AllImageCount$Freq),]
+  colnames(AllImageCount) <- c('Species','Freq')
+  write.csv(AllImageCount,
+            file.path(photodir,OutputCountCSV),
+            row.names = FALSE)
+}
+ 
+## Write off the list of all taxa used to a csv too
+write.csv(AllTaxa,
+          file.path(photodir,AllImagesCSV),
+          row.names = FALSE)
+
+if(CollateImages){collate.images(photodir,CollateFolder)}
+cat('Finished creating and exporting files','\n')
+```
