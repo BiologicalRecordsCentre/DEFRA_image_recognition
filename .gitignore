@@ -4,3 +4,5 @@
 .Ruserdata
 .httr-oauth
 Image_Retrieval/Flickr/*/
+Image_Retrieval/Flickr/FlickrImageScraper.html
+Image_Retrieval/Google/GoogleImageScraper.html
