@@ -3,11 +3,12 @@
 .RData
 .Ruserdata
 .httr-oauth
-Image_Retrieval/Flickr/*/
 Image_Retrieval/Flickr/*.html
+Image_Retrieval/Flickr/*/
 Image_Retrieval/Google/*.html
 Image_Retrieval/Google/*/
 Image_Retrieval/iRecord/*/
+Image_Retrieval/iRecord/*.html
 Image_Retrieval/iRecord/Example/CountImagesExample.csv
 Image_Retrieval/iRecord/Example/ImagesOutputExample.csv
 desktop.ini
