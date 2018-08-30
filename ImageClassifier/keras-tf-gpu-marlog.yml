@@ -1,0 +1,29 @@
+# conda env create -f keras-tf-gpu-mpl.yml
+name: keras-tf-gpu-marlog2
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.5
+  # Keras Dependencies
+  - numpy
+  - scipy
+  # marlog inclusion of matplotlib
+  - matplotlib
+  - yaml
+  - hdf5
+  - h5py
+  # Notebook Dependencies
+  - jupyter
+  - notebook
+  # Data Wrangling and Plotting
+  - pandas
+  - bokeh
+  # marlog - missing charts bokeh
+  - bkcharts
+  - scikit-learn
+  # Non-Conda based packages
+  - pip:
+    - tensorflow-gpu
+    - keras
+    - pillow
