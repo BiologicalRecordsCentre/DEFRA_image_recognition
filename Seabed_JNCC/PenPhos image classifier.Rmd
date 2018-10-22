@@ -15,57 +15,57 @@ The first stage is to set up folders containing images for training, validation 
 base_dir <- "D:/Image analysis/PenPhosMR/PenPhos"
 
 train_dir <- file.path(base_dir, "train")
-#dir.create(train_dir)
+dir.create(train_dir)
 
 validation_dir <- file.path(base_dir, "validation")
-#dir.create(validation_dir)
+dir.create(validation_dir)
 
 test_dir <- file.path(base_dir, "test")
-#dir.create(test_dir)
+dir.create(test_dir)
 
 train_present_dir <- file.path(train_dir, "present")
-#dir.create(train_present_dir)
+dir.create(train_present_dir)
 
 train_absent_dir <- file.path(train_dir, "absent")
-#dir.create(train_absent_dir)
+dir.create(train_absent_dir)
 
 validation_present_dir <- file.path(validation_dir, "present")
-#dir.create(validation_present_dir)
+dir.create(validation_present_dir)
 
 validation_absent_dir <- file.path(validation_dir, "absent")
-#dir.create(validation_absent_dir)
+dir.create(validation_absent_dir)
 
 test_present_dir <- file.path(test_dir, "present")
-#dir.create(test_present_dir)
+dir.create(test_present_dir)
 
 test_absent_dir <- file.path(test_dir, "absent")
-#dir.create(test_absent_dir)
+dir.create(test_absent_dir)
 
-#presence_files <- list.files(file.path(base_dir, "Present"))
-#presence_train <- sample(1:length(presence_files), round(0.6*length(presence_files)))
-#presence_validation <- sample((1:length(presence_files))[-presence_train], round(0.2*length(presence_files)))
-#presence_test <- (1:length(presence_files))[-c(presence_train, presence_validation)]
+presence_files <- list.files(file.path(base_dir, "Present_best"))
+presence_train <- sample(1:length(presence_files), round(0.6*length(presence_files)))
+presence_validation <- sample((1:length(presence_files))[-presence_train], round(0.2*length(presence_files)))
+presence_test <- (1:length(presence_files))[-c(presence_train, presence_validation)]
 
-#file.copy(file.path(base_dir, "Present", presence_files[presence_train]), train_present_dir)
-#file.copy(file.path(base_dir, "Present", presence_files[presence_validation]), validation_present_dir)
-#file.copy(file.path(base_dir, "Present", presence_files[presence_test]), test_present_dir)
+file.copy(file.path(base_dir, "Present", presence_files[presence_train]), train_present_dir)
+file.copy(file.path(base_dir, "Present", presence_files[presence_validation]), validation_present_dir)
+file.copy(file.path(base_dir, "Present", presence_files[presence_test]), test_present_dir)
 
-#absence_files <- list.files(file.path(base_dir, "Not present"))
-#absence_train <- sample(1:length(absence_files), round(0.6*length(absence_files)))
-#absence_validation <- sample((1:length(absence_files))[-absence_train], round(0.2*length(absence_files)))
-#absence_test <- (1:length(absence_files))[-c(absence_train, absence_validation)]
+absence_files <- list.files(file.path(base_dir, "Not present"))
+absence_train <- sample(1:length(absence_files), round(0.6*length(absence_files)))
+absence_validation <- sample((1:length(absence_files))[-absence_train], round(0.2*length(absence_files)))
+absence_test <- (1:length(absence_files))[-c(absence_train, absence_validation)]
 
-#file.copy(file.path(base_dir, "Not present", absence_files[absence_train]), train_absent_dir)
-#file.copy(file.path(base_dir, "Not present", absence_files[absence_validation]), validation_absent_dir)
-#file.copy(file.path(base_dir, "Not present", absence_files[absence_test]), test_absent_dir)
+file.copy(file.path(base_dir, "Not present", absence_files[absence_train]), train_absent_dir)
+file.copy(file.path(base_dir, "Not present", absence_files[absence_validation]), validation_absent_dir)
+file.copy(file.path(base_dir, "Not present", absence_files[absence_test]), test_absent_dir)
 ```
 
 
 ```{r train model}
 library(keras)
 
-conv_base <- application_vgg16(weights = "imagenet", include_top=FALSE, input_shape = c(150,150,3))
-#conv_base <- application__inception_v3(weights = "imagenet", include_top=FALSE, input_shape = c(150,150,3))
+#conv_base <- application_vgg16(weights = "imagenet", include_top=FALSE, input_shape = c(150,150,3))
+conv_base <- application_inception_resnet_v2(weights = "imagenet", include_top=FALSE, input_shape = c(299,299,3))
 
 model <- keras_model_sequential() %>% 
   conv_base %>% 
